@@ -47,6 +47,7 @@
         function loadModalites(dimensionId) {
             const dimensionSelect = document.getElementById(`dimension_${dimensionId}`);
             const dimensionValue = dimensionSelect.value;
+            console.log('Dimension choisie:',dimensionValue)
 
             fetch(`/get_modalites/${dimensionValue}`)
                 .then(response => response.json())

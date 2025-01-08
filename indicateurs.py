@@ -20,7 +20,7 @@ def imp_indicateurs_excel(file):
         cursor = connection.cursor()
 
         # Préparer la requête SQL
-        sql = "INSERT INTO Indicateurs (idIndicateur, f_idSousDomaines, nomIndicateur) VALUES (%s, %s, %s)"
+        sql = "INSERT INTO Indicateurs (idIndicateurs, f_idSousDomaines, nomIndicateur) VALUES (%s, %s, %s)"
         print("Importation des données dans la base de données...")
 
         # Insérer les données dans la base
@@ -52,5 +52,5 @@ def imp_indicateurs_excel(file):
             print("Connexion MySQL fermée.")
 
 # Exemple d'utilisation
-file_name = "C:\\Users\\DELL\\OneDrive - ENSEA\\Desktop\\ANStat base\\Appliction_web\\parametre.xlsx"
+file_name = "C:\\Users\\DELL\\OneDrive - ENSEA\\Desktop\\ANStat base\\Appliction_web\\parametre1.xlsx"
 imp_indicateurs_excel(file=file_name)

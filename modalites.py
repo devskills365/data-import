@@ -52,5 +52,5 @@ def imp_modalites_excel(file):
             print("Connexion MySQL fermée.")
 
 # Exemple d'utilisation
-file_name = "C:\\Users\\DELL\\OneDrive - ENSEA\\Desktop\\ANStat base\\Appliction_web\\parametre.xlsx"
+file_name = "C:\\Users\\DELL\\OneDrive - ENSEA\\Desktop\\ANStat base\\Appliction_web\\parametre1.xlsx"
 imp_modalites_excel(file=file_name)
