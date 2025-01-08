@@ -9,23 +9,19 @@ db_config= {
     'password': '10080805Tohbi',
     'database': 'anstat_base_regionale'
 }
-
 # Fonction principale pour insérer des données à partir d'un fichier Excel
 def insert_data_from_excel(excel_file):
     try:
         # Lecture du fichier Excel
         df = pd.read_excel(excel_file)
-
         # Vérification des colonnes attendues
         expected_columns = ['Année', 'Indicateurs', 'Dimension', 'Modalites', 'Valeurs']
         if not all(col in df.columns for col in expected_columns):
             logging.error("Erreur : Certaines colonnes attendues manquent dans le fichier Excel.")
             return
-
         # Nettoyage des colonnes pertinentes
         for col in expected_columns:
             df[col] = df[col].astype(str).str.strip()
-
         # Connexion à la base de données
         with mysql.connector.connect(**db_config) as mydb:
             with mydb.cursor(buffered=True) as cursor:
@@ -106,7 +102,7 @@ def insert_data_from_excel(excel_file):
         logging.error(f"Une erreur est survenue : {e}")
 
 # Chemin du fichier Excel
-excel_file_path = "C:\\Users\\DELL\\OneDrive - ENSEA\\Desktop\\ANStat base\\Appliction_web\\data2.xlsx"
+excel_file_path = "C:\\Users\\DELL\\OneDrive - ENSEA\\Desktop\\ANStat base\\Appliction_web\\data3.xlsx"
 
 # Exécution du script
 insert_data_from_excel(excel_file_path)

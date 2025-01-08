@@ -69,6 +69,22 @@ ALTER TABLE Dimensions MODIFY nomDimension VARCHAR(255) COLLATE utf8mb4_general_
 ALTER TABLE Modalites MODIFY nomModalites VARCHAR(255) COLLATE utf8mb4_general_ci;
 ALTER TABLE Indicateurs MODIFY nomIndicateur VARCHAR(255) COLLATE utf8mb4_general_ci;
 
+-- Pour traiter les requêtes sur données et valeurs par dimensions.
+use Anstat_base_regionale;
+SELECT 
+    i.nomIndicateur AS Indicateur,
+    a.valAnnees AS Annee,
+    d.valDonnees AS Valeur,
+    GROUP_CONCAT(DISTINCT dim.nomDimension SEPARATOR ', ') AS Dimensions,
+     GROUP_CONCAT(DISTINCT m.nomModalites SEPARATOR ', ') AS Modalites
+FROM Donnees d
+JOIN Indicateurs i ON d.f_idIndicateurs = i.idIndicateurs
+JOIN Annees a ON d.f_idAnnees = a.idAnnees
+LEFT JOIN Donnees_modalites dm ON d.idDonnees = dm.f_idDonnees
+LEFT JOIN Modalites m ON dm.f_idModalites = m.idModalites
+LEFT JOIN Dimensions dim ON m.f_idDimensions = dim.idDimensions
+GROUP BY i.nomIndicateur, a.valAnnees, d.valDonnees
+ORDER BY i.nomIndicateur, a.valAnnees;
 
 
 

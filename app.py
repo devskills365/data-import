@@ -1,69 +1,126 @@
-import pandas as pd
-from sqlalchemy import create_engine
+from flask import Flask, request, jsonify, render_template,redirect,url_for
+import mysql.connector
+from mysql.connector import Error
+import os
 
-# 1. Connexion à la base de données MySQL
-engine = create_engine("mysql+pymysql://username:password@localhost/SchemaRegionale")
+app = Flask(__name__)
 
-# 2. Lecture du fichier Excel
-# Remplacez 'fichier.xlsx' par le chemin de votre fichier Excel
-excel_file = 'data.xlsx'
-data = pd.read_excel(excel_file)
+DB_CONFIG = {
+    'host': "localhost",
+    'user': "root",
+    'password': '10080805Tohbi',  # Stockez le mot de passe dans une variable d'environnement
+    'database': "anstat_base_regionale"
+}
 
-# 3. Traitement des données pour les adapter à la base
-def prepare_data(row):
-    # Séparer les dimensions et modalités
-    dimensions = row['Dimension'].split(" / ")  # Gestion des sous-dimensions
-    modalites = row['Modalites'].split(" / ")
+def get_db_connection():
+    return mysql.connector.connect(**DB_CONFIG)
 
-    # Retourner un dictionnaire prêt pour l'insertion
-    return {
-        "nomDimension": dimensions[-1],  # Dernière dimension
-        "nomModalites": modalites[-1],  # Dernière modalité
-        "nomIndicateur": row['Indicateurs'],
-        "valAnnees": row['Année'],
-        "valDonnees": row['Valeurs']
-    }
+@app.route('/add')
+def add_page():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
 
-processed_data = data.apply(prepare_data, axis=1).tolist()
+        cursor.execute("SELECT idIndicateurs, nomIndicateur FROM Indicateurs")
+        indicateurs = cursor.fetchall()
+        cursor.execute("SELECT idAnnees, valAnnees FROM Annees")
+        annees = cursor.fetchall()  # Récupérer les années de la base de données
 
-# 4. Insérer les données dans les tables correspondantes
-with engine.connect() as connection:
-    for item in processed_data:
-        # 4.1. Insérer les dimensions si elles n'existent pas
-        connection.execute("""
-            INSERT IGNORE INTO Dimensions (nomDimension) VALUES (%s)
-        """, (item['nomDimension'],))
+        return render_template('add.html', indicateurs=indicateurs, annees=annees)
+    except Error as e:
+        return jsonify({'error': f"Erreur de base de données : {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
-        # 4.2. Récupérer l'idDimensions
-        result = connection.execute("""
-            SELECT idDimensions FROM Dimensions WHERE nomDimension = %s
-        """, (item['nomDimension'],))
-        id_dimensions = result.fetchone()['idDimensions']
+@app.route('/get_dimensions', methods=['GET'])
+def get_dimensions():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT idDimensions, nomDimension FROM Dimensions")
+        dimensions = cursor.fetchall()
+        return jsonify(dimensions)
+    except Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
-        # 4.3. Insérer les modalités si elles n'existent pas
-        connection.execute("""
-            INSERT IGNORE INTO Modalites (idDimensions, nomModalites) VALUES (%s, %s)
-        """, (id_dimensions, item['nomModalites']))
+@app.route('/get_modalites/<idDimension>', methods=['GET'])
+def get_modalites(idDimension):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT idModalites, nomModalites FROM Modalites WHERE f_idDimensions = %s", (idDimension,))
+        modalites = cursor.fetchall()
+        return jsonify(modalites)
+    except Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
-        # 4.4. Récupérer l'idModalites
-        result = connection.execute("""
-            SELECT idModalites FROM Modalites WHERE nomModalites = %s
-        """, (item['nomModalites'],))
-        id_modalites = result.fetchone()['idModalites']
 
-        # 4.5. Insérer les années si elles n'existent pas
-        connection.execute("""
-            INSERT IGNORE INTO Annees (valAnnees) VALUES (%s)
-        """, (item['valAnnees'],))
 
-        # 4.6. Récupérer l'idAnnees
-        result = connection.execute("""
-            SELECT idAnnees FROM Annees WHERE valAnnees = %s
-        """, (item['valAnnees'],))
-        id_annees = result.fetchone()['idAnnees']
 
-        # 4.7. Insérer les données dans la table Donnees
-        connection.execute("""
-            INSERT INTO Donnees (idIndicateurs, idAnnees, valDonnees) 
+@app.route('/add_data', methods=['GET'])
+def add_data():
+    try:
+        # Récupération des paramètres
+        idIndicateur = request.args.get('idIndicateur')
+        idAnnees = request.args.get('idAnnees')
+        valeur = request.args.get('valeur')
+        dimensions = request.args.getlist('dimensions[]')
+        modalites_1 = request.args.getlist('modalites_1[]')
+        modalites_2 = request.args.getlist('modalites_2[]')
+        modalites_3 = request.args.getlist('modalites_3[]')
+        modalites_4 = request.args.getlist('modalites_4[]')
+
+        # Association des dimensions et modalités
+        modalites = {}
+        for i, dimension in enumerate(dimensions):
+            if i == 0:
+                modalites[dimension] = modalites_1
+            elif i == 1:
+                modalites[dimension] = modalites_2
+            elif i == 2:
+                modalites[dimension] = modalites_3
+            elif i == 3:
+                modalites[dimension] = modalites_4
+
+        # Connexion à la base de données
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Insertion des données principales
+        cursor.execute("""
+            INSERT INTO Donnees (f_idIndicateurs, f_idAnnees, valDonnees)
             VALUES (%s, %s, %s)
-        """, (id_modalites, id_annees, item['valDonnees']))
+        """, (idIndicateur, idAnnees, valeur))
+        conn.commit()
+        idDonnees = cursor.lastrowid
+
+        # Insertion des dimensions et modalités
+        for dimension, mods in modalites.items():
+            for mod in mods:
+                cursor.execute("""
+                    INSERT INTO Donnees_modalites (f_idDonnees, f_idModalites)
+                    VALUES (%s, %s)
+                """, (idDonnees, mod))
+        conn.commit()
+
+        return redirect(url_for('add_page'))
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

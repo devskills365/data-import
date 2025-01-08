@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/form_style.css') }}">
+ 
+    <script>
+        let dimensionCount = 0;
+
+        // Ajouter une nouvelle dimension
+        function addDimension() {
+            dimensionCount++;
+            const container = document.getElementById("dimensionsContainer");
+
+            const dimensionDiv = document.createElement("div");
+            dimensionDiv.className = "dimension-group";
+
+            dimensionDiv.innerHTML = `
+                <label for="dimension_${dimensionCount}">Dimension:</label>
+                <select name="dimensions[]" id="dimension_${dimensionCount}" onchange="loadModalites(${dimensionCount})" required>
+                    <option value="">Sélectionnez une dimension</option>
+                </select>
+
+                <label for="modalites_${dimensionCount}">Modalités:</label>
+                <select name="modalites_${dimensionCount}[]" id="modalites_${dimensionCount}" multiple required>
+                    <option value="">Sélectionnez des modalités</option>
+                </select>
+            `;
+            container.appendChild(dimensionDiv);
+
+            fetch('/get_dimensions')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById(`dimension_${dimensionCount}`);
+                    data.forEach(dimension => {
+                        const option = document.createElement("option");
+                        option.value = dimension.idDimensions;
+                        option.textContent = dimension.nomDimension;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error("Erreur lors du chargement des dimensions :", error));
+        }
+
+        // Charger les modalités pour une dimension sélectionnée
+        function loadModalites(dimensionId) {
+            const dimensionSelect = document.getElementById(`dimension_${dimensionId}`);
+            const dimensionValue = dimensionSelect.value;
+
+            fetch(`/get_modalites/${dimensionValue}`)
+                .then(response => response.json())
+                .then(data => {
+                    const modalitesSelect = document.getElementById(`modalites_${dimensionId}`);
+                    modalitesSelect.innerHTML = ''; // Réinitialiser
+
+                    data.forEach(modalite => {
+                        const option = document.createElement("option");
+                        option.value = modalite.idModalites;
+                        option.textContent = modalite.nomModalites;
+                        modalitesSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error("Erreur lors du chargement des modalités :", error));
+        }
+
+        // Soumettre le formulaire
+        document.getElementById("dataForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            let data = {
+                dimensions: [],
+                modalites: {}
+            };
+
+            formData.forEach((value, key) => {
+                if (key === "dimensions[]") {
+                    data.dimensions.push(value);
+                } else if (key.startsWith("modalites_")) {
+                    const dimensionId = key.split("_")[1];
+                    data.modalites[dimensionId] = data.modalites[dimensionId] || [];
+                    data.modalites[dimensionId].push(value);
+                } else {
+                    data[key] = value;
+                }
+            });
+
+            fetch('/add_data', {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(response => response.json())
+                .then(data => alert(data.message || "Données soumises avec succès !"))
+                .catch(error => console.error("Erreur lors de l'envoi :", error));
+        });
+    </script>
+</head>
+<body>
+  
+    <form action="/add_data" id="dataForm">
+        <label for="idIndicateur">Indicateur:</label>
+        <select id="idIndicateur" name="idIndicateur" required>
+            <option value="">Sélectionnez un indicateur</option>
+            {% for indicateur in indicateurs %}
+                <option value="{{ indicateur.idIndicateurs }}">{{ indicateur.nomIndicateur }}</option>
+            {% endfor %}
+        </select>
+        <br>
+
+        <label for="idAnnees">Année:</label>
+        <select id="idAnnees" name="idAnnees" required>
+            <option value="">Sélectionnez une année</option>
+            {% for annee in annees %}
+                <option value="{{ annee.idAnnees }}">{{ annee.valAnnees }}</option>
+            {% endfor %}
+        </select>
+        <br>
+
+
+        <label for="valeur">Valeur:</label>
+        <input type="number" step="1" name="valeur" id="valeur" required>
+
+        <div id="dimensionsContainer">
+            <!-- Conteneur pour les dimensions et leurs modalités -->
+        </div>
+
+        <button type="button" onclick="addDimension()">Ajouter une dimension</button>
+        <button type="submit">Soumettre</button>
+    </form>
+</body>
+</html>
