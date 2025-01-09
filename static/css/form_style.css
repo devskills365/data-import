@@ -109,3 +109,26 @@ select[multiple] {
         margin-right: 0;
     }
 }
+
+
+.dimension-group {
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.remove-dimension-btn {
+    background-color: #ff6666;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.remove-dimension-btn:hover {
+    background-color: #ff4c4c;
+}

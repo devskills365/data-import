@@ -21,7 +21,7 @@ def add_page():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
 
-        cursor.execute("SELECT idIndicateurs, nomIndicateur FROM Indicateurs")
+        cursor.execute("SELECT idIndicateurs, nomIndicateur FROM Indicateurs ORDER BY nomIndicateur")
         indicateurs = cursor.fetchall()
         cursor.execute("SELECT idAnnees, valAnnees FROM Annees")
         annees = cursor.fetchall()  # Récupérer les années de la base de données
@@ -33,12 +33,37 @@ def add_page():
         cursor.close()
         conn.close()
 
+@app.route('/search_indicateur', methods=['GET'])
+def search_indicateur():
+    try:
+        query = request.args.get('q', '').lower()
+        if not query:
+            return jsonify([])  # Liste vide si aucun mot-clé fourni
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT idIndicateurs, nomIndicateur
+            FROM Indicateurs
+            WHERE LOWER(nomIndicateur) LIKE %s
+            ORDER BY nomIndicateur
+        """, (f"%{query}%",))
+        results = cursor.fetchall()
+        return jsonify(results)
+    except Error as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+
 @app.route('/get_dimensions', methods=['GET'])
 def get_dimensions():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT idDimensions, nomDimension FROM Dimensions")
+        cursor.execute("SELECT idDimensions, nomDimension FROM Dimensions ORDER BY nomDimension ")
         dimensions = cursor.fetchall()
         return jsonify(dimensions)
     except Error as e:
@@ -46,6 +71,9 @@ def get_dimensions():
     finally:
         cursor.close()
         conn.close()
+
+
+
 
 @app.route('/get_modalites/<idDimension>', methods=['GET'])
 def get_modalites(idDimension):
@@ -64,11 +92,16 @@ def get_modalites(idDimension):
 
 
 
+# Demain , je vais faire la requête pour chercher l'ID indicateur
 @app.route('/add_data', methods=['GET'])
 def add_data():
     try:
         # Récupération des paramètres
-        idIndicateur = request.args.get('idIndicateur')
+        nomIndicateur = request.args.get('nomIndicateur')
+        if nomIndicateur is None:
+            return jsonify({'error': 'nomIndicateur parameter is missing'}), 400
+        
+        print('indicateur :', nomIndicateur)
         idAnnees = request.args.get('idAnnees')
         valeur = request.args.get('valeur')
         dimensions = request.args.getlist('dimensions[]')
@@ -92,6 +125,18 @@ def add_data():
         # Connexion à la base de données
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Vérification de l'ID de l'indicateur
+        cursor.execute("""
+            SELECT idIndicateurs
+            FROM Indicateurs
+            WHERE nomIndicateur = %s
+        """, (nomIndicateur,))
+        idIndicateur = cursor.fetchone()[0] 
+        if idIndicateur is None:
+            return jsonify({'error': 'Indicateur not found'}), 404
+        
+        print('Exemple:', idIndicateur)
 
         # Insertion des données principales
         cursor.execute("""

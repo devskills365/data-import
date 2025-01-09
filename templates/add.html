@@ -4,31 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/form_style.css') }}">
- 
+
     <script>
         let dimensionCount = 0;
-
+    
         // Ajouter une nouvelle dimension
         function addDimension() {
             dimensionCount++;
             const container = document.getElementById("dimensionsContainer");
-
+    
             const dimensionDiv = document.createElement("div");
             dimensionDiv.className = "dimension-group";
-
+            dimensionDiv.id = `dimensionGroup_${dimensionCount}`;
+    
             dimensionDiv.innerHTML = `
                 <label for="dimension_${dimensionCount}">Dimension:</label>
                 <select name="dimensions[]" id="dimension_${dimensionCount}" onchange="loadModalites(${dimensionCount})" required>
                     <option value="">Sélectionnez une dimension</option>
                 </select>
-
-                <label for="modalites_${dimensionCount}">Modalités:</label>
-                <select name="modalites_${dimensionCount}[]" id="modalites_${dimensionCount}" multiple required>
-                    <option value="">Sélectionnez des modalités</option>
-                </select>
+    
+                <div id="modalitesContainer_${dimensionCount}" class="modalites-container">
+                    <!-- Boutons radio des modalités -->
+                </div>
+    
+                <button type="button" onclick="removeDimension(${dimensionCount})" class="remove-dimension-btn">Supprimer</button>
             `;
+    
             container.appendChild(dimensionDiv);
-
+    
+            // Charger les dimensions
             fetch('/get_dimensions')
                 .then(response => response.json())
                 .then(data => {
@@ -42,72 +46,68 @@
                 })
                 .catch(error => console.error("Erreur lors du chargement des dimensions :", error));
         }
-
+    
+        // Supprimer une dimension
+        function removeDimension(id) {
+            const dimensionDiv = document.getElementById(`dimensionGroup_${id}`);
+            dimensionDiv.remove();
+        }
+    
         // Charger les modalités pour une dimension sélectionnée
         function loadModalites(dimensionId) {
             const dimensionSelect = document.getElementById(`dimension_${dimensionId}`);
             const dimensionValue = dimensionSelect.value;
-            console.log('Dimension choisie:',dimensionValue)
-
+    
             fetch(`/get_modalites/${dimensionValue}`)
                 .then(response => response.json())
                 .then(data => {
-                    const modalitesSelect = document.getElementById(`modalites_${dimensionId}`);
-                    modalitesSelect.innerHTML = ''; // Réinitialiser
-
+                    const container = document.getElementById(`modalitesContainer_${dimensionId}`);
+                    container.innerHTML = ''; // Réinitialiser
+    
                     data.forEach(modalite => {
-                        const option = document.createElement("option");
-                        option.value = modalite.idModalites;
-                        option.textContent = modalite.nomModalites;
-                        modalitesSelect.appendChild(option);
+                        const radio = `
+                            <label>
+                                <input type="radio" name="modalites_${dimensionId}" value="${modalite.idModalites}" required>
+                                ${modalite.nomModalites}
+                            </label>
+                        `;
+                        container.innerHTML += radio;
                     });
                 })
                 .catch(error => console.error("Erreur lors du chargement des modalités :", error));
         }
-
-        // Soumettre le formulaire
-        document.getElementById("dataForm").addEventListener("submit", function (event) {
-            event.preventDefault();
-
-            const formData = new FormData(this);
-            let data = {
-                dimensions: [],
-                modalites: {}
-            };
-
-            formData.forEach((value, key) => {
-                if (key === "dimensions[]") {
-                    data.dimensions.push(value);
-                } else if (key.startsWith("modalites_")) {
-                    const dimensionId = key.split("_")[1];
-                    data.modalites[dimensionId] = data.modalites[dimensionId] || [];
-                    data.modalites[dimensionId].push(value);
-                } else {
-                    data[key] = value;
-                }
+    
+        // Activer l'autocomplétion pour les indicateurs
+        function setupAutocomplete() {
+            const input = document.getElementById("nomIndicateur");
+            input.addEventListener("input", function () {
+                const query = input.value;
+    
+                fetch(`/search_indicateur?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const datalist = document.getElementById("indicateurOptions");
+                        datalist.innerHTML = ''; // Réinitialiser
+    
+                        data.forEach(indicateur => {
+                            const option = document.createElement("option");
+                            option.value = indicateur.nomIndicateur;
+                            datalist.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error("Erreur lors de l'autocomplétion :", error));
             });
-
-            fetch('/add_data', {
-                method: 'POST',
-                body: JSON.stringify(data),
-                headers: { 'Content-Type': 'application/json' }
-            })
-                .then(response => response.json())
-                .then(data => alert(data.message || "Données soumises avec succès !"))
-                .catch(error => console.error("Erreur lors de l'envoi :", error));
-        });
+        }
+    
+        document.addEventListener("DOMContentLoaded", setupAutocomplete);
     </script>
+    
 </head>
 <body>
-  
     <form action="/add_data" id="dataForm">
-        <label for="idIndicateur">Indicateur:</label>
-        <select id="idIndicateur" name="idIndicateur" required>
-            <option value="">Sélectionnez un indicateur</option>
-            {% for indicateur in indicateurs %}
-                <option value="{{ indicateur.idIndicateurs }}">{{ indicateur.nomIndicateur }}</option>
-            {% endfor %}
-        </select>
+        <label for="nomIndicateur">Indicateur:</label>
+        <input list="indicateurOptions" id="nomIndicateur" name="nomIndicateur" required>
+        <datalist id="indicateurOptions"></datalist>
         <br>
 
         <label for="idAnnees">Année:</label>
@@ -119,9 +119,9 @@
         </select>
         <br>
 
-
         <label for="valeur">Valeur:</label>
         <input type="number" step="1" name="valeur" id="valeur" required>
+        <br>
 
         <div id="dimensionsContainer">
             <!-- Conteneur pour les dimensions et leurs modalités -->
