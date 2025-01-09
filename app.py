@@ -61,9 +61,24 @@ def search_indicateur():
 @app.route('/get_dimensions', methods=['GET'])
 def get_dimensions():
     try:
+        indicateur = request.args.get('nomIndicateur')  # Si vous envoyez en GET
+        # ou
+        # indicateur = request.form.get('nomIndicateur')  # Si vous utilisez POST
+        print('Indicateur:', indicateur)
+    
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT idDimensions, nomDimension FROM Dimensions ORDER BY nomDimension ")
+        
+        # Requête SQL mise à jour avec filtre sur le nom de l'indicateur
+        query = """
+        SELECT DISTINCT d.idDimensions, d.nomDimension, i.nomIndicateur
+        FROM Indicateurs i
+        JOIN NiveauDesagre nd ON i.idIndicateurs = nd.f_idIndicateurs
+        JOIN Dimensions d ON nd.nomNiveauDesagre LIKE CONCAT('%', d.nomDimension, '%')
+        WHERE i.nomIndicateur = %s
+        """
+        
+        cursor.execute(query, (indicateur,))
         dimensions = cursor.fetchall()
         return jsonify(dimensions)
     except Error as e:

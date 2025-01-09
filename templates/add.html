@@ -7,33 +7,36 @@
 
     <script>
         let dimensionCount = 0;
-    
+
         // Ajouter une nouvelle dimension
         function addDimension() {
             dimensionCount++;
+            toggleSubmitButton(); // Vérifier si le bouton Soumettre doit être affiché
+
             const container = document.getElementById("dimensionsContainer");
-    
+
             const dimensionDiv = document.createElement("div");
             dimensionDiv.className = "dimension-group";
             dimensionDiv.id = `dimensionGroup_${dimensionCount}`;
-    
+
             dimensionDiv.innerHTML = `
                 <label for="dimension_${dimensionCount}">Dimension:</label>
                 <select name="dimensions[]" id="dimension_${dimensionCount}" onchange="loadModalites(${dimensionCount})" required>
                     <option value="">Sélectionnez une dimension</option>
                 </select>
-    
+
                 <div id="modalitesContainer_${dimensionCount}" class="modalites-container">
                     <!-- Boutons radio des modalités -->
                 </div>
-    
+
                 <button type="button" onclick="removeDimension(${dimensionCount})" class="remove-dimension-btn">Supprimer</button>
             `;
-    
+
             container.appendChild(dimensionDiv);
-    
-            // Charger les dimensions
-            fetch('/get_dimensions')
+
+            const indicateur = document.getElementById("nomIndicateur").value;
+
+            fetch(`/get_dimensions?nomIndicateur=${encodeURIComponent(indicateur)}`)
                 .then(response => response.json())
                 .then(data => {
                     const select = document.getElementById(`dimension_${dimensionCount}`);
@@ -46,24 +49,26 @@
                 })
                 .catch(error => console.error("Erreur lors du chargement des dimensions :", error));
         }
-    
+
         // Supprimer une dimension
         function removeDimension(id) {
             const dimensionDiv = document.getElementById(`dimensionGroup_${id}`);
             dimensionDiv.remove();
+            dimensionCount--;
+            toggleSubmitButton(); // Vérifier si le bouton Soumettre doit être masqué
         }
-    
+
         // Charger les modalités pour une dimension sélectionnée
         function loadModalites(dimensionId) {
             const dimensionSelect = document.getElementById(`dimension_${dimensionId}`);
             const dimensionValue = dimensionSelect.value;
-    
+
             fetch(`/get_modalites/${dimensionValue}`)
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById(`modalitesContainer_${dimensionId}`);
                     container.innerHTML = ''; // Réinitialiser
-    
+
                     data.forEach(modalite => {
                         const radio = `
                             <label>
@@ -76,34 +81,24 @@
                 })
                 .catch(error => console.error("Erreur lors du chargement des modalités :", error));
         }
-    
-        // Activer l'autocomplétion pour les indicateurs
-        function setupAutocomplete() {
-            const input = document.getElementById("nomIndicateur");
-            input.addEventListener("input", function () {
-                const query = input.value;
-    
-                fetch(`/search_indicateur?q=${encodeURIComponent(query)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const datalist = document.getElementById("indicateurOptions");
-                        datalist.innerHTML = ''; // Réinitialiser
-    
-                        data.forEach(indicateur => {
-                            const option = document.createElement("option");
-                            option.value = indicateur.nomIndicateur;
-                            datalist.appendChild(option);
-                        });
-                    })
-                    .catch(error => console.error("Erreur lors de l'autocomplétion :", error));
-            });
+
+        // Basculer la visibilité du bouton Soumettre
+        function toggleSubmitButton() {
+            const submitButton = document.getElementById("submitButton");
+            if (dimensionCount > 0) {
+                submitButton.style.display = "block";
+            } else {
+                submitButton.style.display = "none";
+            }
         }
-    
-        document.addEventListener("DOMContentLoaded", setupAutocomplete);
+
+        document.addEventListener("DOMContentLoaded", () => {
+            toggleSubmitButton(); // Initialiser la visibilité du bouton Soumettre
+        });
     </script>
-    
 </head>
 <body>
+    <h1>Formulaire de saisie des indicateurs</h1>
     <form action="/add_data" id="dataForm">
         <label for="nomIndicateur">Indicateur:</label>
         <input list="indicateurOptions" id="nomIndicateur" name="nomIndicateur" required>
@@ -119,16 +114,16 @@
         </select>
         <br>
 
-        <label for="valeur">Valeur:</label>
-        <input type="number" step="1" name="valeur" id="valeur" required>
-        <br>
-
         <div id="dimensionsContainer">
             <!-- Conteneur pour les dimensions et leurs modalités -->
         </div>
 
+        <label for="valeur">Valeur:</label>
+        <input type="number" step="1" name="valeur" id="valeur" required>
+        <br>
+
         <button type="button" onclick="addDimension()">Ajouter une dimension</button>
-        <button type="submit">Soumettre</button>
+        <button type="submit" id="submitButton" style="display: none;">Soumettre</button>
     </form>
 </body>
 </html>

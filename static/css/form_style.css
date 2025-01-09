@@ -9,6 +9,7 @@ body {
     align-items: center;
     min-height: 100vh;
     color: #333;
+    flex-direction: column; /* Ajouté pour empiler les éléments verticalement */
 }
 
 /* Conteneur principal pour le formulaire */
@@ -39,9 +40,11 @@ label {
 }
 
 /* Champs d'entrée */
+/* Champs d'entrée */
 input[type="number"],
-select {
-    width: 100%;
+select,
+input[list="indicateurOptions"] { /* Ajout pour le champ indicateur */
+    width: 100%; /* Utilise toute la largeur disponible */
     padding: 8px;
     margin-top: 5px;
     margin-bottom: 10px;
@@ -109,7 +112,6 @@ select[multiple] {
         margin-right: 0;
     }
 }
-
 
 .dimension-group {
     margin-bottom: 15px;
