@@ -32,7 +32,8 @@ def add_page():
     finally:
         cursor.close()
         conn.close()
-
+        
+# Recherche de l'indicateur  
 @app.route('/search_indicateur', methods=['GET'])
 def search_indicateur():
     try:
@@ -57,7 +58,7 @@ def search_indicateur():
         conn.close()
 
 
-
+# Dimension en fonction de l'indicateurs
 @app.route('/get_dimensions', methods=['GET'])
 def get_dimensions():
     try:
@@ -89,7 +90,7 @@ def get_dimensions():
 
 
 
-
+# Obtenir les modalités selon les leur dimensions
 @app.route('/get_modalites/<idDimension>', methods=['GET'])
 def get_modalites(idDimension):
     try:
